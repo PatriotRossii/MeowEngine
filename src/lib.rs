@@ -9,7 +9,7 @@ use serde_json::{Value};
 use tokio::{task::JoinHandle, time::{sleep, Duration}};
 
 
-const API_VERSION: &str = "5.130";
+pub const API_VERSION: &str = "5.130";
 
 pub struct ApiManager {
     token: String,
@@ -90,11 +90,6 @@ impl RaidSystem {
     }
 
     async fn work(handler: ApiManager, invite_link: String, messages: Vec<String>) {
-        let user_id = handler.request(
-            "account.getProfileInfo", &[()]
-        ).await.unwrap().json::<Value>().await.unwrap();
-        let user_id = user_id["response"]["id"].as_str().unwrap();
-
         let resp = handler.request(
             "messages.joinChatByInviteLink", &[("link", &invite_link)]
         ).await.unwrap().json::<Value>().await.unwrap();
@@ -102,13 +97,13 @@ impl RaidSystem {
 
         let chat_id: String;
         if resp.contains_key("response") {
-            chat_id = resp["response"].as_str().unwrap().into();
+            chat_id = format!("{}", resp["response"]["chat_id"].as_i64().unwrap());
         } else {
             // Then it contains key "error"
             let resp = handler.request(
                 "messages.getChatPreview", &[("link", &invite_link)]
             ).await.unwrap().json::<Value>().await.unwrap();
-            chat_id = resp["preview"]["local_id"].as_str().unwrap().into();
+            chat_id = format!("{}", resp["response"]["preview"]["local_id"].as_i64().unwrap());
         }
 
         for message in messages.iter().cycle() {
